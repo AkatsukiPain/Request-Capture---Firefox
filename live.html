@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Catchpoint — Live Queue</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="live.css" />
+</head>
+<body>
+  <div class="live-page">
+    <header class="live-header">
+      <div class="live-title">
+        <span class="dot"></span>
+        <strong>Live Queue</strong>
+      </div>
+      <span class="eyebrow" id="pendingCount">0 waiting</span>
+    </header>
+
+    <div class="live-body">
+      <div id="pendingList" class="pending-list"></div>
+      <div id="emptyState" class="empty-state">
+        Nothing paused right now. Requests matched by a <strong>Live capture</strong> rule
+        will show up here the moment they fire.
+      </div>
+
+      <div id="detail" class="detail" hidden>
+        <div class="detail-head">
+          <button id="backBtn" class="btn btn--ghost">‹ back</button>
+        </div>
+        <div class="detail-meta">
+          <span class="pill pill--teal" id="detailMethod">GET</span>
+          <span class="detail-url" id="detailUrl"></span>
+        </div>
+        <div class="subhead">Request headers</div>
+        <div id="detailHeaders" class="header-rows"></div>
+        <button class="btn btn--ghost add-row-btn" id="addHeaderBtn">+ add header</button>
+
+        <div class="detail-actions">
+          <button id="cancelReqBtn" class="btn btn--danger">cancel request</button>
+          <div class="spacer"></div>
+          <button id="sendReqBtn" class="btn btn--primary">send request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="live.js"></script>
+</body>
+</html>

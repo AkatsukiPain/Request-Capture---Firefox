@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Catchpoint — Rules</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="brand">
+        <span class="dot"></span>
+        <h1>Catchpoint</h1>
+        <span class="eyebrow">request interceptor</span>
+      </div>
+      <div class="header-actions">
+        <div id="breaker" class="breaker">
+          <span class="breaker-label" id="breakerLabel">OFF</span>
+          <span class="breaker-track"><span class="breaker-knob"></span></span>
+        </div>
+        <button id="liveQueueBtn" class="btn">live queue</button>
+        <button id="importBtn" class="btn">import</button>
+        <button id="exportBtn" class="btn">export</button>
+        <input type="file" id="importFile" accept="application/json" hidden />
+        <button id="addRuleBtn" class="btn btn--primary">+ new rule</button>
+      </div>
+    </header>
+
+    <p class="hint">
+      Rules run top to bottom — the <strong>first enabled match wins</strong> for a given request.
+      Reorder with the arrows to change priority.
+    </p>
+
+    <div id="ruleList" class="rule-list"></div>
+    <div id="emptyState" class="empty-state" hidden>
+      No rules yet. Create one to start catching requests, or import a shared rule set.
+    </div>
+
+    <!-- Rule editor panel -->
+    <div id="editorOverlay" class="editor-overlay" hidden>
+      <div class="editor">
+        <div class="editor-head">
+          <span id="editorTitle">New rule</span>
+          <button id="closeEditor" class="btn btn--ghost">close ✕</button>
+        </div>
+
+        <div class="editor-body">
+          <label class="field">
+            <span class="field-label">Name</span>
+            <input id="f_name" type="text" placeholder="e.g. Mock user API" />
+          </label>
+
+          <div class="field">
+            <span class="field-label">Mode</span>
+            <div class="segmented" id="modeSegmented">
+              <button type="button" data-mode="adjust" class="active">Request adjustment</button>
+              <button type="button" data-mode="live">Live capture</button>
+            </div>
+            <p class="note" id="modeHint">Applies the action below automatically, every time this rule matches.</p>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">Match mode</span>
+              <select id="f_matchMode">
+                <option value="contains">contains</option>
+                <option value="glob">glob (*)</option>
+                <option value="regex">regex</option>
+              </select>
+            </label>
+            <label class="field field--grow">
+              <span class="field-label">URL pattern</span>
+              <input id="f_pattern" type="text" placeholder="https://api.example.com/users*" />
+            </label>
+            <label class="field">
+              <span class="field-label">Method</span>
+              <select id="f_method">
+                <option value="ANY">ANY</option>
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>PATCH</option>
+                <option>DELETE</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="adjustFields">
+          <label class="field">
+            <span class="field-label">Action</span>
+            <select id="f_actionType">
+              <option value="modifyHeaders">Modify headers</option>
+              <option value="redirect">Redirect URL</option>
+              <option value="mockResponse">Mock response (short-circuit)</option>
+              <option value="delay">Delay request</option>
+              <option value="block">Block request</option>
+            </select>
+          </label>
+
+          <!-- modifyHeaders -->
+          <div id="panel_modifyHeaders" class="action-panel">
+            <div class="subhead">Request headers</div>
+            <div id="reqHeaderRows" class="header-rows"></div>
+            <button class="btn btn--ghost add-row-btn" data-add="request">+ add request header</button>
+
+            <div class="subhead" style="margin-top:14px;">Response headers</div>
+            <div id="resHeaderRows" class="header-rows"></div>
+            <button class="btn btn--ghost add-row-btn" data-add="response">+ add response header</button>
+          </div>
+
+          <!-- redirect -->
+          <div id="panel_redirect" class="action-panel">
+            <label class="field">
+              <span class="field-label">Redirect to</span>
+              <input id="f_redirectUrl" type="text" placeholder="https://localhost:3000/mock" />
+            </label>
+          </div>
+
+          <!-- mockResponse -->
+          <div id="panel_mockResponse" class="action-panel">
+            <label class="field">
+              <span class="field-label">Content-Type</span>
+              <input id="f_mockContentType" type="text" value="application/json" />
+            </label>
+            <label class="field">
+              <span class="field-label">Body</span>
+              <textarea id="f_mockBody" rows="6" placeholder='{"mocked": true}'></textarea>
+            </label>
+            <p class="note">Note: the quick-mock always returns HTTP 200 (data-URL limitation of a browser extension without a native host).</p>
+          </div>
+
+          <!-- delay -->
+          <div id="panel_delay" class="action-panel">
+            <label class="field">
+              <span class="field-label">Delay (ms)</span>
+              <input id="f_delayMs" type="number" min="0" value="1000" />
+            </label>
+          </div>
+
+          <!-- block has no extra fields -->
+          </div>
+
+          <div id="liveFields" class="action-panel">
+            <p class="note">
+              Matching requests will pause right before they're sent to the server.
+              A separate <strong>Live Queue</strong> window opens where you can review and
+              edit the request headers, then choose to send or cancel it.
+            </p>
+            <p class="note">
+              Only the request side can be edited this way (headers only) — the browser's
+              extension APIs don't allow rewriting the URL, method, or body once a request
+              is already in flight.
+            </p>
+          </div>
+        </div>
+
+        <div class="editor-foot">
+          <button id="deleteRuleBtn" class="btn btn--danger" hidden>delete rule</button>
+          <div class="spacer"></div>
+          <button id="cancelEdit" class="btn btn--ghost">cancel</button>
+          <button id="saveRule" class="btn btn--primary">save rule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

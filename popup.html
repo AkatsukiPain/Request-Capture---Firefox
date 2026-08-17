@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Catchpoint</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+    <header class="popup-header">
+      <div class="popup-title">
+        <span class="dot"></span>
+        <strong>Catchpoint</strong>
+      </div>
+      <div id="breaker" class="breaker">
+        <span class="breaker-label" id="breakerLabel">OFF</span>
+        <span class="breaker-track"><span class="breaker-knob"></span></span>
+      </div>
+    </header>
+
+    <div class="popup-stats">
+      <span id="ruleCount" class="eyebrow">0 rules active</span>
+      <button id="clearLog" class="btn btn--ghost">clear log</button>
+    </div>
+
+    <div class="popup-log" id="log">
+      <div class="empty-state">No requests caught yet. Browse somewhere and matching rules will show up here.</div>
+    </div>
+
+    <footer class="popup-footer">
+      <button id="openLiveQueue" class="btn">Live queue</button>
+      <button id="openOptions" class="btn btn--primary">Open rule editor</button>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

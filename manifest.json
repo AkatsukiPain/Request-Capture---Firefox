@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "name": "Catchpoint",
+  "version": "0.1.0",
+  "description": "Catch and rewrite HTTP requests before they leave the browser. Free, open source, unlimited rules.",
+  "icons": {
+    "48": "icons/icon48.svg",
+    "96": "icons/icon96.svg"
+  },
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "storage"
+  ],
+  "background": {
+    "scripts": ["rule-engine.js", "background.js"]
+  },
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Catchpoint",
+    "default_icon": {
+      "48": "icons/icon48.svg"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "catchpoint@opensource.local",
+      "strict_min_version": "57.0"
+    }
+  }
+}
