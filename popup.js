@@ -1,3 +1,22 @@
+function clearChildren(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function createEl(tag, options = {}, children = []) {
+  const el = document.createElement(tag);
+  if (options.className) el.className = options.className;
+  if (options.text != null) el.textContent = options.text;
+  if (options.attrs) {
+    Object.entries(options.attrs).forEach(([k, v]) => {
+      if (v != null) el.setAttribute(k, v);
+    });
+  }
+  children.forEach((child) => {
+    if (child) el.appendChild(child);
+  });
+  return el;
+}
+
 async function refreshRuleCount() {
   const res = await browser.runtime.sendMessage({ type: "GET_RULE_COUNT" });
   document.getElementById("ruleCount").textContent =
@@ -6,31 +25,34 @@ async function refreshRuleCount() {
 
 function renderLog(entries) {
   const container = document.getElementById("log");
+  clearChildren(container);
+
   if (!entries.length) {
-    container.innerHTML =
-      '<div class="empty-state">No requests caught yet. Browse somewhere and matching rules will show up here.</div>';
+    container.appendChild(
+      createEl("div", {
+        className: "empty-state",
+        text: "No requests caught yet. Browse somewhere and matching rules will show up here.",
+      })
+    );
     return;
   }
-  container.innerHTML = entries
-    .slice(0, 30)
-    .map((e) => {
-      const time = new Date(e.time).toLocaleTimeString();
-      return `
-        <div class="log-row">
-          <div class="log-row-top">
-            <span class="log-method">${escapeHtml(e.method)}</span>
-            <span class="log-url" title="${escapeHtml(e.url)}">${escapeHtml(e.url)}</span>
-          </div>
-          <div class="log-meta">${time} · ${escapeHtml(e.ruleName || "rule")} · ${escapeHtml(e.actionType || "")}</div>
-        </div>`;
-    })
-    .join("");
-}
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]));
+  entries.slice(0, 30).forEach((e) => {
+    const time = new Date(e.time).toLocaleTimeString();
+    const top = createEl("div", { className: "log-row-top" }, [
+      createEl("span", { className: "log-method", text: e.method || "" }),
+      createEl("span", {
+        className: "log-url",
+        text: e.url || "",
+        attrs: { title: e.url || "" },
+      }),
+    ]);
+    const meta = createEl("div", {
+      className: "log-meta",
+      text: `${time} · ${e.ruleName || "rule"} · ${e.actionType || ""}`,
+    });
+    container.appendChild(createEl("div", { className: "log-row" }, [top, meta]));
+  });
 }
 
 async function refreshLog() {

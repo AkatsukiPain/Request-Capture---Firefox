@@ -8,10 +8,28 @@ function uid() {
   return "r_" + Math.random().toString(36).slice(2, 10);
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]));
+function clearChildren(node) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function createEl(tag, options = {}, children = []) {
+  const el = document.createElement(tag);
+  if (options.className) el.className = options.className;
+  if (options.text != null) el.textContent = options.text;
+  if (options.dataset) {
+    Object.entries(options.dataset).forEach(([k, v]) => {
+      el.dataset[k] = v;
+    });
+  }
+  if (options.attrs) {
+    Object.entries(options.attrs).forEach(([k, v]) => {
+      if (v != null) el.setAttribute(k, v);
+    });
+  }
+  children.forEach((child) => {
+    if (child) el.appendChild(child);
+  });
+  return el;
 }
 
 async function loadRules() {
@@ -25,6 +43,10 @@ async function saveRules() {
   renderList();
 }
 
+function createBadge(label, color) {
+  return createEl("span", { className: `pill pill--${color}`, text: label });
+}
+
 function actionBadge(action) {
   const map = {
     modifyHeaders: ["headers", "teal"],
@@ -34,12 +56,12 @@ function actionBadge(action) {
     block: ["block", "red"],
   };
   const [label, color] = map[action && action.type] || ["—", "teal"];
-  return `<span class="pill pill--${color}">${label}</span>`;
+  return createBadge(label, color);
 }
 
 function modeBadge(rule) {
   if (rule.mode === "live") {
-    return `<span class="pill pill--amber">live capture</span>`;
+    return createBadge("live capture", "amber");
   }
   return actionBadge(rule.action);
 }
@@ -47,37 +69,54 @@ function modeBadge(rule) {
 function renderList() {
   const list = $("ruleList");
   const empty = $("emptyState");
+  clearChildren(list);
+
   if (!rules.length) {
-    list.innerHTML = "";
     empty.hidden = false;
     return;
   }
   empty.hidden = true;
 
-  list.innerHTML = rules
-    .map((r, i) => {
-      return `
-        <div class="rule-row ${r.enabled ? "" : "disabled"}" data-id="${r.id}">
-          <div class="rule-index">${i + 1}</div>
-          <div class="rule-main">
-            <div class="rule-name">${escapeHtml(r.name || "(unnamed rule)")}</div>
-            <div class="rule-pattern">${escapeHtml(r.matchMode)} · ${escapeHtml(r.method || "ANY")} · ${escapeHtml(r.pattern || "")}</div>
-          </div>
-          <div class="rule-badges">${modeBadge(r)}</div>
-          <div class="mini-toggle ${r.enabled ? "on" : ""}" data-toggle title="${r.enabled ? "Enabled — click to disable" : "Disabled — click to enable"}">
-            <span class="mini-toggle-track"><span class="mini-toggle-knob"></span></span>
-            <span class="mini-toggle-text">${r.enabled ? "on" : "off"}</span>
-          </div>
-          <div class="rule-order-btns">
-            <button data-move="up" title="Move up">▲</button>
-            <button data-move="down" title="Move down">▼</button>
-          </div>
-          <div class="rule-actions">
-            <button class="btn btn--ghost" data-edit>edit</button>
-          </div>
-        </div>`;
-    })
-    .join("");
+  rules.forEach((r, i) => {
+    const row = createEl("div", {
+      className: `rule-row ${r.enabled ? "" : "disabled"}`.trim(),
+      dataset: { id: r.id },
+    }, [
+      createEl("div", { className: "rule-index", text: String(i + 1) }),
+      createEl("div", { className: "rule-main" }, [
+        createEl("div", { className: "rule-name", text: r.name || "(unnamed rule)" }),
+        createEl("div", {
+          className: "rule-pattern",
+          text: `${r.matchMode || ""} · ${r.method || "ANY"} · ${r.pattern || ""}`,
+        }),
+      ]),
+      createEl("div", { className: "rule-badges" }, [modeBadge(r)]),
+      createEl(
+        "div",
+        {
+          className: `mini-toggle ${r.enabled ? "on" : ""}`.trim(),
+          dataset: { toggle: "" },
+          attrs: {
+            title: r.enabled ? "Enabled — click to disable" : "Disabled — click to enable",
+          },
+        },
+        [
+          createEl("span", { className: "mini-toggle-track" }, [
+            createEl("span", { className: "mini-toggle-knob" }),
+          ]),
+          createEl("span", { className: "mini-toggle-text", text: r.enabled ? "on" : "off" }),
+        ]
+      ),
+      createEl("div", { className: "rule-order-btns" }, [
+        createEl("button", { text: "▲", dataset: { move: "up" }, attrs: { title: "Move up", type: "button" } }),
+        createEl("button", { text: "▼", dataset: { move: "down" }, attrs: { title: "Move down", type: "button" } }),
+      ]),
+      createEl("div", { className: "rule-actions" }, [
+        createEl("button", { className: "btn btn--ghost", text: "edit", dataset: { edit: "" }, attrs: { type: "button" } }),
+      ]),
+    ]);
+    list.appendChild(row);
+  });
 }
 
 document.addEventListener("click", (e) => {
@@ -101,26 +140,32 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// ---------------- Editor ----------------
-
-function headerRowHtml(op) {
-  op = op || { name: "", op: "set", value: "" };
-  return `
-    <div class="header-row">
-      <select class="hr-op">
-        <option value="set" ${op.op === "set" ? "selected" : ""}>set</option>
-        <option value="remove" ${op.op === "remove" ? "selected" : ""}>remove</option>
-      </select>
-      <input class="hr-name" type="text" placeholder="Header-Name" value="${escapeHtml(op.name)}" />
-      <input class="hr-value" type="text" placeholder="value" value="${escapeHtml(op.value)}" />
-      <button class="btn btn--ghost hr-remove" title="remove row">✕</button>
-    </div>`;
+function createHeaderRow(op = { name: "", op: "set", value: "" }) {
+  return createEl("div", { className: "header-row" }, [
+    createEl("select", { className: "hr-op" }, [
+      createEl("option", { text: "set", attrs: { value: "set" } }),
+      createEl("option", { text: "remove", attrs: { value: "remove" } }),
+    ]),
+    createEl("input", {
+      className: "hr-name",
+      attrs: { type: "text", placeholder: "Header-Name", value: op.name || "" },
+    }),
+    createEl("input", {
+      className: "hr-value",
+      attrs: { type: "text", placeholder: "value", value: op.value || "" },
+    }),
+    createEl("button", {
+      className: "btn btn--ghost hr-remove",
+      text: "✕",
+      attrs: { title: "remove row", type: "button" },
+    }),
+  ]);
 }
 
 function addHeaderRow(container, op) {
-  const div = document.createElement("div");
-  div.innerHTML = headerRowHtml(op);
-  container.appendChild(div.firstElementChild);
+  const row = createHeaderRow(op);
+  row.querySelector(".hr-op").value = (op && op.op) || "set";
+  container.appendChild(row);
 }
 
 function readHeaderRows(container) {
@@ -165,8 +210,8 @@ function resetEditorFields() {
   $("f_mockContentType").value = "application/json";
   $("f_mockBody").value = "";
   $("f_delayMs").value = "1000";
-  $("reqHeaderRows").innerHTML = "";
-  $("resHeaderRows").innerHTML = "";
+  clearChildren($("reqHeaderRows"));
+  clearChildren($("resHeaderRows"));
   addHeaderRow($("reqHeaderRows"));
   addHeaderRow($("resHeaderRows"));
   showActionPanel("modifyHeaders");
@@ -191,8 +236,8 @@ function openEditor(rule) {
     showActionPanel(action.type || "modifyHeaders");
 
     if (action.type === "modifyHeaders") {
-      $("reqHeaderRows").innerHTML = "";
-      $("resHeaderRows").innerHTML = "";
+      clearChildren($("reqHeaderRows"));
+      clearChildren($("resHeaderRows"));
       (action.requestHeaders && action.requestHeaders.length
         ? action.requestHeaders
         : [{ op: "set", name: "", value: "" }]
@@ -265,11 +310,9 @@ async function handleSave() {
 
   const existingIdx = editingId ? rules.findIndex((r) => r.id === editingId) : -1;
   if (existingIdx !== -1) {
-    // Editing: overwrite in place, preserve enabled state.
     rule.enabled = rules[existingIdx].enabled;
     rules[existingIdx] = rule;
   } else {
-    // New rule (or a stale editingId that no longer matches anything).
     rules.push(rule);
   }
 
@@ -283,8 +326,6 @@ async function handleDelete() {
   await saveRules();
   closeEditor();
 }
-
-// ---------------- Wiring ----------------
 
 $("addRuleBtn").addEventListener("click", () => openEditor(null));
 $("liveQueueBtn").addEventListener("click", () => {
@@ -309,7 +350,6 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Global breaker
 async function refreshBreaker() {
   const stored = await browser.storage.local.get("globalEnabled");
   const on = stored.globalEnabled !== false;
@@ -324,7 +364,6 @@ $("breaker").addEventListener("click", async () => {
   refreshBreaker();
 });
 
-// Import / export
 $("exportBtn").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(rules, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -344,7 +383,6 @@ $("importFile").addEventListener("change", async (e) => {
     const text = await file.text();
     const imported = JSON.parse(text);
     if (!Array.isArray(imported)) throw new Error("Expected a JSON array of rules");
-    // Assign fresh ids to avoid collisions with existing rules.
     const withIds = imported.map((r) => ({ ...r, id: uid() }));
     rules = rules.concat(withIds);
     await saveRules();
